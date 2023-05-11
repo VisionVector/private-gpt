@@ -3,13 +3,12 @@ from langchain.embeddings import LlamaCppEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All
-from constants import PERSIST_DIRECTORY
-from constants import CHROMA_SETTINGS
 
 def main():        
     # Load stored vectorstore
     llama = LlamaCppEmbeddings(model_path="./models/ggml-model-q4_0.bin")
-    db = Chroma(persist_directory=PERSIST_DIRECTORY, embedding_function=llama, client_settings=CHROMA_SETTINGS)
+    persist_directory = 'db'
+    db = Chroma(persist_directory=persist_directory, embedding_function=llama)
     retriever = db.as_retriever()
     # Prepare the LLM
     callbacks = [StreamingStdOutCallbackHandler()]
