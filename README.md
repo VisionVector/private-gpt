@@ -6,6 +6,7 @@ Built with [LangChain](https://github.com/hwchase17/langchain) and [GPT4All](htt
 <img width="902" alt="demo" src="https://user-images.githubusercontent.com/721666/236942256-985801c9-25b9-48ef-80be-3acbb4575164.png">
 
 # Environment Setup
+
 In order to set your environment up to run the code here, first install all requirements:
 
 ```shell
@@ -25,15 +26,7 @@ MODEL_PATH: Path to your GPT4All or LlamaCpp supported LLM
 MODEL_N_CTX: Maximum token limit for both embeddings and LLM models
 ```
 
-Note: because of the way `langchain` loads the `LLAMMA` embeddings, you need to specify the absolute path of your embeddings model binary. This means it will not work if you use a home directory shortcut (eg. `~/` or `$HOME/`).
-
-## Setup C++ Compiler
-If you encountered an error with `pip install`, you might need to install a C++ compiler on your computer.
-
-### For Windows 10/11
-Install Visual Studio 2022 along with nessesary components: Universal Windows Platform development, C++ CMake tools for Windows
-Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/)
-Run the installer and select the "gcc" component
+Note: because of the way `langchain` loads the `LLAMA` embeddings, you need to specify the absolute path of your embeddings model binary. This means it will not work if you use a home directory shortcut (eg. `~/` or `$HOME/`).
 
 ## Test dataset
 This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
