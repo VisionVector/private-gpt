@@ -3,20 +3,7 @@ import glob
 from typing import List
 from dotenv import load_dotenv
 
-from langchain.document_loaders import (
-    CSVLoader,
-    EverNoteLoader,
-    PDFMinerLoader,
-    TextLoader,
-    UnstructuredEmailLoader,
-    UnstructuredEPubLoader,
-    UnstructuredHTMLLoader,
-    UnstructuredMarkdownLoader,
-    UnstructuredODTLoader,
-    UnstructuredPowerPointLoader,
-    UnstructuredWordDocumentLoader,
-)
-
+from langchain.document_loaders import TextLoader, PDFMinerLoader, CSVLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import LlamaCppEmbeddings
@@ -27,44 +14,23 @@ from constants import CHROMA_SETTINGS
 load_dotenv()
 
 
-# Map file extensions to document loaders and their arguments
-LOADER_MAPPING = {
-    ".csv": (CSVLoader, {}),
-    # ".docx": (Docx2txtLoader, {}),
-    ".docx": (UnstructuredWordDocumentLoader, {}),
-    ".enex": (EverNoteLoader, {}),
-    ".eml": (UnstructuredEmailLoader, {}),
-    ".epub": (UnstructuredEPubLoader, {}),
-    ".html": (UnstructuredHTMLLoader, {}),
-    ".md": (UnstructuredMarkdownLoader, {}),
-    ".odt": (UnstructuredODTLoader, {}),
-    ".pdf": (PDFMinerLoader, {}),
-    ".pptx": (UnstructuredPowerPointLoader, {}),
-    ".txt": (TextLoader, {"encoding": "utf8"}),
-    # Add more mappings for other file extensions and loaders as needed
-}
-
-
-load_dotenv()
-
-
 def load_single_document(file_path: str) -> Document:
-    ext = "." + file_path.rsplit(".", 1)[-1]
-    if ext in LOADER_MAPPING:
-        loader_class, loader_args = LOADER_MAPPING[ext]
-        loader = loader_class(file_path, **loader_args)
-        return loader.load()[0]
-
-    raise ValueError(f"Unsupported file extension '{ext}'")
+    # Loads a single document from a file path
+    if file_path.endswith(".txt"):
+        loader = TextLoader(file_path, encoding="utf8")
+    elif file_path.endswith(".pdf"):
+        loader = PDFMinerLoader(file_path)
+    elif file_path.endswith(".csv"):
+        loader = CSVLoader(file_path)
+    return loader.load()[0]
 
 
 def load_documents(source_dir: str) -> List[Document]:
     # Loads all documents from source documents directory
-    all_files = []
-    for ext in LOADER_MAPPING:
-        all_files.extend(
-            glob.glob(os.path.join(source_dir, f"**/*{ext}"), recursive=True)
-        )
+    txt_files = glob.glob(os.path.join(source_dir, "**/*.txt"), recursive=True)
+    pdf_files = glob.glob(os.path.join(source_dir, "**/*.pdf"), recursive=True)
+    csv_files = glob.glob(os.path.join(source_dir, "**/*.csv"), recursive=True)
+    all_files = txt_files + pdf_files + csv_files
     return [load_single_document(file_path) for file_path in all_files]
 
 
