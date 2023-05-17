@@ -24,15 +24,11 @@ from langchain.docstore.document import Document
 from constants import CHROMA_SETTINGS
 
 
-load_dotenv()
-
-
 # Map file extensions to document loaders and their arguments
 LOADER_MAPPING = {
     ".csv": (CSVLoader, {}),
     # ".docx": (Docx2txtLoader, {}),
     ".docx": (UnstructuredWordDocumentLoader, {}),
-    ".doc": (UnstructuredWordDocumentLoader, {}),
     ".enex": (EverNoteLoader, {}),
     ".eml": (UnstructuredEmailLoader, {}),
     ".epub": (UnstructuredEPubLoader, {}),
@@ -41,7 +37,6 @@ LOADER_MAPPING = {
     ".odt": (UnstructuredODTLoader, {}),
     ".pdf": (PDFMinerLoader, {}),
     ".pptx": (UnstructuredPowerPointLoader, {}),
-    ".ppt": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
     # Add more mappings for other file extensions and loaders as needed
 }
