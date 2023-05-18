@@ -2,6 +2,7 @@ import os
 import glob
 from typing import List
 from dotenv import load_dotenv
+from multiprocessing import Pool
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -31,7 +32,7 @@ LOADER_MAPPING = {
     ".doc": (UnstructuredWordDocumentLoader, {}),
     ".docx": (UnstructuredWordDocumentLoader, {}),
     ".enex": (EverNoteLoader, {}),
-    ".eml": (MyElmLoader, {}),
+    ".eml": (UnstructuredEmailLoader, {}),
     ".epub": (UnstructuredEPubLoader, {}),
     ".html": (UnstructuredHTMLLoader, {}),
     ".md": (UnstructuredMarkdownLoader, {}),
@@ -45,24 +46,6 @@ LOADER_MAPPING = {
 
 
 load_dotenv()
-
-
-class MyElmLoader(UnstructuredEmailLoader):
-    """Wrapper to fallback to text/plain when default does not work"""
-
-    def load(self) -> List[Document]:
-        """Wrapper adding fallback for elm without html"""
-        try:
-            doc = UnstructuredEmailLoader.load()
-        except ValueError as e:
-            if 'text/html content not found in email' in str(e):
-                # Try plain text
-                self.unstructured_kwargs["content_source"]="text/plain"
-                doc = UnstructuredEmailLoader.load()
-            else:
-                raise
-
-        return doc
 
 
 def load_single_document(file_path: str) -> Document:
@@ -82,7 +65,9 @@ def load_documents(source_dir: str) -> List[Document]:
         all_files.extend(
             glob.glob(os.path.join(source_dir, f"**/*{ext}"), recursive=True)
         )
-    return [load_single_document(file_path) for file_path in all_files]
+    with Pool(processes=os.cpu_count()) as pool:
+        documents = pool.map(load_single_document, all_files)
+    return documents
 
 
 def main():
