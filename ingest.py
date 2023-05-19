@@ -2,8 +2,6 @@ import os
 import glob
 from typing import List
 from dotenv import load_dotenv
-from multiprocessing import Pool
-from tqdm import tqdm
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -26,6 +24,28 @@ from langchain.docstore.document import Document
 from constants import CHROMA_SETTINGS
 
 
+class MyElmLoader(UnstructuredEmailLoader):
+    """Wrapper to fallback to text/plain when default does not work"""
+
+    def load(self) -> List[Document]:
+        """Wrapper adding fallback for elm without html"""
+        try:
+            try:
+                doc = UnstructuredEmailLoader.load(self)
+            except ValueError as e:
+                if 'text/html content not found in email' in str(e):
+                    # Try plain text
+                    self.unstructured_kwargs["content_source"]="text/plain"
+                    doc = UnstructuredEmailLoader.load(self)
+                else:
+                    raise
+        except Exception as e:
+            # Add file_path to exception message
+            raise type(e)(f"{self.file_path}: {e}") from e
+
+        return doc
+
+
 # Map file extensions to document loaders and their arguments
 LOADER_MAPPING = {
     ".csv": (CSVLoader, {}),
@@ -33,7 +53,7 @@ LOADER_MAPPING = {
     ".doc": (UnstructuredWordDocumentLoader, {}),
     ".docx": (UnstructuredWordDocumentLoader, {}),
     ".enex": (EverNoteLoader, {}),
-    ".eml": (UnstructuredEmailLoader, {}),
+    ".eml": (MyElmLoader, {}),
     ".epub": (UnstructuredEPubLoader, {}),
     ".html": (UnstructuredHTMLLoader, {}),
     ".md": (UnstructuredMarkdownLoader, {}),
@@ -58,6 +78,7 @@ def load_single_document(file_path: str) -> Document:
 
     raise ValueError(f"Unsupported file extension '{ext}'")
 
+
 def load_documents(source_dir: str) -> List[Document]:
     # Loads all documents from source documents directory
     all_files = []
@@ -65,15 +86,7 @@ def load_documents(source_dir: str) -> List[Document]:
         all_files.extend(
             glob.glob(os.path.join(source_dir, f"**/*{ext}"), recursive=True)
         )
-
-    with Pool(processes=os.cpu_count()) as pool:
-        results = []
-        with tqdm(total=len(all_files), desc='Loading documents', ncols=80) as pbar:
-            for i, doc in enumerate(pool.imap_unordered(load_single_document, all_files)):
-                results.append(doc)
-                pbar.update()
-
-    return results
+    return [load_single_document(file_path) for file_path in all_files]
 
 
 def main():
