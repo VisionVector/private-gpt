@@ -1,14 +1,11 @@
-from typing import Literal
-
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-# Not authentication or authorization required to get the health status.
 health_router = APIRouter()
 
 
 class HealthResponse(BaseModel):
-    status: Literal["ok"] = Field(default="ok")
+    status: str = Field(enum=["ok"])
 
 
 @health_router.get("/health", tags=["Health"])

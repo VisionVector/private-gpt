@@ -3,9 +3,10 @@ from pathlib import Path
 from typing import Any
 
 from watchdog.events import (
+    DirCreatedEvent,
+    DirModifiedEvent,
     FileCreatedEvent,
     FileModifiedEvent,
-    FileSystemEvent,
     FileSystemEventHandler,
 )
 from watchdog.observers import Observer
@@ -19,11 +20,11 @@ class IngestWatcher:
         self.on_file_changed = on_file_changed
 
         class Handler(FileSystemEventHandler):
-            def on_modified(self, event: FileSystemEvent) -> None:
+            def on_modified(self, event: DirModifiedEvent | FileModifiedEvent) -> None:
                 if isinstance(event, FileModifiedEvent):
                     on_file_changed(Path(event.src_path))
 
-            def on_created(self, event: FileSystemEvent) -> None:
+            def on_created(self, event: DirCreatedEvent | FileCreatedEvent) -> None:
                 if isinstance(event, FileCreatedEvent):
                     on_file_changed(Path(event.src_path))
 

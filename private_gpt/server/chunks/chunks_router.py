@@ -1,13 +1,11 @@
-from typing import Literal
-
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
+from private_gpt.di import root_injector
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
-from private_gpt.server.utils.auth import authenticated
 
-chunks_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
+chunks_router = APIRouter(prefix="/v1")
 
 
 class ChunksBody(BaseModel):
@@ -18,13 +16,13 @@ class ChunksBody(BaseModel):
 
 
 class ChunksResponse(BaseModel):
-    object: Literal["list"]
-    model: Literal["private-gpt"]
+    object: str = Field(enum=["list"])
+    model: str = Field(enum=["private-gpt"])
     data: list[Chunk]
 
 
 @chunks_router.post("/chunks", tags=["Context Chunks"])
-def chunks_retrieval(request: Request, body: ChunksBody) -> ChunksResponse:
+def chunks_retrieval(body: ChunksBody) -> ChunksResponse:
     """Given a `text`, returns the most relevant chunks from the ingested documents.
 
     The returned information can be used to generate prompts that can be
@@ -44,7 +42,7 @@ def chunks_retrieval(request: Request, body: ChunksBody) -> ChunksResponse:
     `/ingest/list` endpoint. If you want all ingested documents to be used,
     remove `context_filter` altogether.
     """
-    service = request.state.injector.get(ChunksService)
+    service = root_injector.get(ChunksService)
     results = service.retrieve_relevant(
         body.text, body.context_filter, body.limit, body.prev_next_chunks
     )

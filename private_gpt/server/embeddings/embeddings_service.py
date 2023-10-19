@@ -1,5 +1,3 @@
-from typing import Literal
-
 from injector import inject, singleton
 from pydantic import BaseModel, Field
 
@@ -8,7 +6,7 @@ from private_gpt.components.embedding.embedding_component import EmbeddingCompon
 
 class Embedding(BaseModel):
     index: int
-    object: Literal["embedding"]
+    object: str = Field(enum=["embedding"])
     embedding: list[float] = Field(examples=[[0.0023064255, -0.009327292]])
 
 

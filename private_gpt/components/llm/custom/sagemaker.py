@@ -3,37 +3,30 @@ from __future__ import annotations
 
 import io
 import json
-import logging
 from typing import TYPE_CHECKING, Any
 
 import boto3  # type: ignore
-from llama_index.core.base.llms.generic_utils import (
-    completion_response_to_chat_response,
-    stream_completion_response_to_chat_response,
-)
-from llama_index.core.bridge.pydantic import Field
-from llama_index.core.llms import (
+from llama_index.bridge.pydantic import Field
+from llama_index.llms import (
     CompletionResponse,
     CustomLLM,
     LLMMetadata,
 )
-from llama_index.core.llms.callbacks import (
-    llm_chat_callback,
-    llm_completion_callback,
+from llama_index.llms.base import llm_completion_callback
+from llama_index.llms.llama_utils import (
+    completion_to_prompt as generic_completion_to_prompt,
+)
+from llama_index.llms.llama_utils import (
+    messages_to_prompt as generic_messages_to_prompt,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable
 
     from llama_index.callbacks import CallbackManager
     from llama_index.llms import (
-        ChatMessage,
-        ChatResponse,
-        ChatResponseGen,
         CompletionResponseGen,
     )
-
-logger = logging.getLogger(__name__)
 
 
 class LineIterator:
@@ -90,7 +83,7 @@ class LineIterator:
                     continue
                 raise
             if "PayloadPart" not in chunk:
-                logger.warning("Unknown event type=%s", chunk)
+                print("Unknown event type:" + chunk)
                 continue
             self.buffer.seek(0, io.SEEK_END)
             self.buffer.write(chunk["PayloadPart"]["Bytes"])
@@ -120,10 +113,10 @@ class SagemakerLLM(CustomLLM):
     context_window: int = Field(
         description="The maximum number of context tokens for the model."
     )
-    messages_to_prompt: Any = Field(
+    messages_to_prompt: Callable[..., str] = Field(
         description="The function to convert messages to a prompt.", exclude=True
     )
-    completion_to_prompt: Any = Field(
+    completion_to_prompt: Callable[..., str] = Field(
         description="The function to convert a completion to a prompt.", exclude=True
     )
     generate_kwargs: dict[str, Any] = Field(
@@ -155,8 +148,8 @@ class SagemakerLLM(CustomLLM):
         model_kwargs = model_kwargs or {}
         model_kwargs.update({"n_ctx": context_window, "verbose": verbose})
 
-        messages_to_prompt = messages_to_prompt or {}
-        completion_to_prompt = completion_to_prompt or {}
+        messages_to_prompt = messages_to_prompt or generic_messages_to_prompt
+        completion_to_prompt = completion_to_prompt or generic_completion_to_prompt
 
         generate_kwargs = generate_kwargs or {}
         generate_kwargs.update(
@@ -218,7 +211,7 @@ class SagemakerLLM(CustomLLM):
 
         response_body = resp["Body"]
         response_str = response_body.read().decode("utf-8")
-        response_dict = json.loads(response_str)
+        response_dict = eval(response_str)
 
         return CompletionResponse(
             text=response_dict[0]["generated_text"][len(prompt) :], raw=resp
@@ -243,34 +236,13 @@ class SagemakerLLM(CustomLLM):
             event_stream = resp["Body"]
             start_json = b"{"
             stop_token = "<|endoftext|>"
-            first_token = True
 
             for line in LineIterator(event_stream):
                 if line != b"" and start_json in line:
                     data = json.loads(line[line.find(start_json) :].decode("utf-8"))
-                    special = data["token"]["special"]
-                    stop = data["token"]["text"] == stop_token
-                    if not special and not stop:
+                    if data["token"]["text"] != stop_token:
                         delta = data["token"]["text"]
-                        # trim the leading space for the first token if present
-                        if first_token:
-                            delta = delta.lstrip()
-                            first_token = False
                         text += delta
                         yield CompletionResponse(delta=delta, text=text, raw=data)
 
         return get_stream()
-
-    @llm_chat_callback()
-    def chat(self, messages: Sequence[ChatMessage], **kwargs: Any) -> ChatResponse:
-        prompt = self.messages_to_prompt(messages)
-        completion_response = self.complete(prompt, formatted=True, **kwargs)
-        return completion_response_to_chat_response(completion_response)
-
-    @llm_chat_callback()
-    def stream_chat(
-        self, messages: Sequence[ChatMessage], **kwargs: Any
-    ) -> ChatResponseGen:
-        prompt = self.messages_to_prompt(messages)
-        completion_response = self.stream_complete(prompt, formatted=True, **kwargs)
-        return stream_completion_response_to_chat_response(completion_response)
