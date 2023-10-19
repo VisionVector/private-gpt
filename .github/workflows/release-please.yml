@@ -13,8 +13,7 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: google-github-actions/release-please-action@v4
-        id: release
+      - uses: google-github-actions/release-please-action@v3
         with:
-          config-file: .github/release_please/.release-please-config.json
-          manifest-file: .github/release_please/.release-please-manifest.json
+          release-type: simple
+          version-file: version.txt
