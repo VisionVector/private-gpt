@@ -1,31 +1,12 @@
-from collections.abc import Generator, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from llama_index.core.schema import BaseNode, MetadataMode
-from llama_index.core.vector_stores.utils import node_to_metadata_dict
-from llama_index.vector_stores.chroma import ChromaVectorStore  # type: ignore
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
+from llama_index.schema import BaseNode, MetadataMode
+from llama_index.vector_stores import ChromaVectorStore
+from llama_index.vector_stores.chroma import chunk_list
+from llama_index.vector_stores.utils import node_to_metadata_dict
 
 
-def chunk_list(
-    lst: Sequence[BaseNode], max_chunk_size: int
-) -> Generator[Sequence[BaseNode], None, None]:
-    """Yield successive max_chunk_size-sized chunks from lst.
-
-    Args:
-        lst (List[BaseNode]): list of nodes with embeddings
-        max_chunk_size (int): max chunk size
-
-    Yields:
-        Generator[List[BaseNode], None, None]: list of nodes with embeddings
-    """
-    for i in range(0, len(lst), max_chunk_size):
-        yield lst[i : i + max_chunk_size]
-
-
-class BatchedChromaVectorStore(ChromaVectorStore):  # type: ignore
+class BatchedChromaVectorStore(ChromaVectorStore):
     """Chroma vector store, batching additions to avoid reaching the max batch limit.
 
     In this vector store, embeddings are stored within a ChromaDB collection.
@@ -63,12 +44,12 @@ class BatchedChromaVectorStore(ChromaVectorStore):  # type: ignore
         )
         self.chroma_client = chroma_client
 
-    def add(self, nodes: Sequence[BaseNode], **add_kwargs: Any) -> list[str]:
+    def add(self, nodes: list[BaseNode]) -> list[str]:
         """Add nodes to index, batching the insertion to avoid issues.
 
         Args:
             nodes: List[BaseNode]: list of nodes with embeddings
-            add_kwargs: _
+
         """
         if not self.chroma_client:
             raise ValueError("Client not initialized")
@@ -81,8 +62,8 @@ class BatchedChromaVectorStore(ChromaVectorStore):  # type: ignore
 
         all_ids = []
         for node_chunk in node_chunks:
-            embeddings: list[Sequence[float]] = []
-            metadatas: list[Mapping[str, Any]] = []
+            embeddings = []
+            metadatas = []
             ids = []
             documents = []
             for node in node_chunk:
