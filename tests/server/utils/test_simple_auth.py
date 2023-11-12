@@ -5,11 +5,10 @@ NOTE: We are not testing the switch based on the config in
       is currently architecture (it is hard to patch the `settings` and the app while
       the tests are directly importing them).
 """
-
 from typing import Annotated
 
 import pytest
-from fastapi import Depends
+from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
 from private_gpt.server.utils.auth import (
@@ -30,16 +29,15 @@ def _copy_simple_authenticated(
 
 
 @pytest.fixture(autouse=True)
-def _patch_authenticated_dependency(test_client: TestClient):
+def _patch_authenticated_dependency(current_test_app: FastAPI):
     # Patch the server to use simple authentication
-
-    test_client.app.dependency_overrides[authenticated] = _copy_simple_authenticated
+    current_test_app.dependency_overrides[authenticated] = _copy_simple_authenticated
 
     # Call the actual test
     yield
 
     # Remove the patch for other tests
-    test_client.app.dependency_overrides = {}
+    current_test_app.dependency_overrides = {}
 
 
 def test_default_auth_working_when_enabled_401(test_client: TestClient) -> None:
@@ -52,6 +50,6 @@ def test_default_auth_working_when_enabled_200(test_client: TestClient) -> None:
     assert response_fail.status_code == 401
 
     response_success = test_client.get(
-        "/v1/ingest/list", headers={"Authorization": settings().server.auth.secret}
+        "/v1/ingest/list", headers={"Authorization": settings.server.auth.secret}
     )
     assert response_success.status_code == 200
