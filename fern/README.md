@@ -1,4 +1,4 @@
-# Documentation of PrivateGPT
+# Documentation of privateGPT
 
 The documentation of this project is being rendered thanks to [fern](https://github.com/fern-api/fern).
 
