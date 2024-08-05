@@ -7,9 +7,9 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: zylonai/private-gpt
+  IMAGE_NAME: ${{ github.repository }}
   platforms: linux/amd64,linux/arm64
-  DEFAULT_TYPE: "ollama"
+  DEFAULT_TYPE: "external"
 
 jobs:
   build-and-push-image:
@@ -17,7 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        type: [ llamacpp-cpu, ollama ]
+        type: [ local, external ]
 
     permissions:
       contents: read
